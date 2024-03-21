@@ -19,11 +19,17 @@ public class ResponseHandler implements Runnable{
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()));
             DataOutputStream dos = new DataOutputStream(this.clientSocket.getOutputStream());
             String response = bufferedReader.readLine();
-            System.out.println(response);
+            boolean isEcho = false;
             while (response != null)
             {
-                if(response.contains("ping")){
+                if(isEcho){
+                    dos.write((response+"\r\n").getBytes(StandardCharsets.UTF_8));
+                }
+                if(response.equalsIgnoreCase("ping")){
                     dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
+                }
+                else if (response.equalsIgnoreCase("echo")){
+                    isEcho = true;
                 }
                 response =  bufferedReader.readLine();
             }
