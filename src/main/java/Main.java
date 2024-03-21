@@ -19,30 +19,14 @@ public class Main {
             // ensures that we don't run into 'Address already in use' errors
             serverSocket.setReuseAddress(true);
             // Wait for connection from client.
-            clientSocket = serverSocket.accept();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
-            String response = bufferedReader.readLine();
-            System.out.println(response);
-            while (response != null)
-            {
-                if(response.contains("ping")){
-                    dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
-                }
-                response =  bufferedReader.readLine();
+            while (true){
+                clientSocket = serverSocket.accept();
+                Thread responseThread = new Thread(new ResponseHandler(clientSocket));
+                responseThread.start();
             }
-
 
         } catch (IOException e) {
           System.out.println("IOException: " + e.getMessage());
-        } finally {
-          try {
-            if (clientSocket != null) {
-              clientSocket.close();
-            }
-          } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
-          }
         }
   }
 }
