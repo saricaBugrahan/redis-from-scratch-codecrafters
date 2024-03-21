@@ -1,13 +1,16 @@
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class Main {
   public static void main(String[] args){
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     System.out.println("Logs from your program will appear here!");
 
-      //Uncomment this block to pass the first stage
+        //Uncomment this block to pass the first stage
         ServerSocket serverSocket = null;
         Socket clientSocket = null;
         int port = 6379;
@@ -17,7 +20,19 @@ public class Main {
           // ensures that we don't run into 'Address already in use' errors
           serverSocket.setReuseAddress(true);
           // Wait for connection from client.
+
           clientSocket = serverSocket.accept();
+
+          DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
+          DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
+
+          dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
+
+
+
+
+
+
         } catch (IOException e) {
           System.out.println("IOException: " + e.getMessage());
         } finally {
