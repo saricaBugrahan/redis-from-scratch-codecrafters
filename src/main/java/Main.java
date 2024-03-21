@@ -1,7 +1,5 @@
 import javax.xml.crypto.Data;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -22,16 +20,16 @@ public class Main {
             serverSocket.setReuseAddress(true);
             // Wait for connection from client.
             clientSocket = serverSocket.accept();
-            DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
-            String response = dis.readUTF();
+            String response = bufferedReader.readLine();
             System.out.println(response);
             while (response != null)
             {
                 if(response.contains("ping")){
                     dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
                 }
-                response =  dis.readUTF();
+                response =  bufferedReader.readLine();
             }
 
 
