@@ -24,14 +24,14 @@ public class Main {
             clientSocket = serverSocket.accept();
             DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
             DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
-            String response = String.valueOf(dis.read());
+            String response = dis.readUTF();
             System.out.println(response);
             while (response != null)
             {
                 if(response.contains("ping")){
                     dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
                 }
-                response =  String.valueOf(dis.read());
+                response =  dis.readUTF();
             }
 
 
