@@ -1,3 +1,4 @@
+import javax.xml.crypto.Data;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -15,22 +16,23 @@ public class Main {
         Socket clientSocket = null;
         int port = 6379;
         try {
-          serverSocket = new ServerSocket(port);
-          // Since the tester restarts your program quite often, setting SO_REUSEADDR
-          // ensures that we don't run into 'Address already in use' errors
-          serverSocket.setReuseAddress(true);
-          // Wait for connection from client.
-
-          clientSocket = serverSocket.accept();
-
-          DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
-          DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
-
-          dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
-
-
-
-
+            serverSocket = new ServerSocket(port);
+            // Since the tester restarts your program quite often, setting SO_REUSEADDR
+            // ensures that we don't run into 'Address already in use' errors
+            serverSocket.setReuseAddress(true);
+            // Wait for connection from client.
+            clientSocket = serverSocket.accept();
+            DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
+            DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
+            String response = String.valueOf(dis.read());
+            System.out.println(response);
+            while (response != null)
+            {
+                if(response.contains("ping")){
+                    dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
+                }
+                response =  String.valueOf(dis.read());
+            }
 
 
         } catch (IOException e) {
