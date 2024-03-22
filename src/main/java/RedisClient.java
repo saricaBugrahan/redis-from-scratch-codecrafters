@@ -88,7 +88,12 @@ public class RedisClient implements Runnable{
 
                     } else if(redisCommand.equalsIgnoreCase("info")){
                         if(redisInputPieces.get(i+1).equalsIgnoreCase("replication")){
-                            String response = parseResponseIntoRESPBulk("role:"+redisRole);
+
+                            String response = parseResponseIntoRESPBulk(
+                                    "role:%s\n".formatted(redisRole) +
+                                            "master_replid:%s\n".formatted("8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb") +
+                                            "master_repl_offset:%s\n".formatted("0")
+                            );
                             dos.write(response.getBytes(StandardCharsets.UTF_8));
                         }
                         i+=2;
