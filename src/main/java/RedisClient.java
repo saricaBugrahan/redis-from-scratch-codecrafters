@@ -13,10 +13,12 @@ public class RedisClient implements Runnable{
     private Socket clientSocket;
     private int redisInputCommandCount;
 
+    private String redisRole;
     private ArrayList<String> redisInputPieces;
 
-    public RedisClient(Socket clientSocket){
+    public RedisClient(Socket clientSocket,String redisRole){
         this.clientSocket = clientSocket;
+        this.redisRole = redisRole;
     }
 
     private int getCommandLength(String command){
@@ -58,6 +60,7 @@ public class RedisClient implements Runnable{
                         String response = parseResponseIntoRESPBulk(redisInputPieces.get(i+1));
                         dos.write(response.getBytes(StandardCharsets.UTF_8));
                         i+=2;
+
                     } else if (redisCommand.equalsIgnoreCase("set")) {
                         redisKeyValuePair.put(redisInputPieces.get(i+1), redisInputPieces.get(i+2));
                         String response = parseResponseIntoRESPBulk("OK");
@@ -77,18 +80,20 @@ public class RedisClient implements Runnable{
                         dos.write(response.getBytes(StandardCharsets.UTF_8));
                         i+=2;
                         System.out.println("Enters to get");
+
                     } else if(redisCommand.equalsIgnoreCase("-p")){
                         int portNumber = Integer.parseInt(redisInputPieces.get(i+1));
                         System.out.println("Port information will be given "+portNumber);
                         i+=2;
+
                     } else if(redisCommand.equalsIgnoreCase("info")){
                         if(redisInputPieces.get(i+1).equalsIgnoreCase("replication")){
-                            String response = parseResponseIntoRESPBulk("role:master");
+                            String response = parseResponseIntoRESPBulk("role:"+redisRole);
                             dos.write(response.getBytes(StandardCharsets.UTF_8));
                         }
                         i+=2;
-                    }
-                    else{
+
+                    } else{
                         System.out.println("Invalid Case");
                     }
                 }
