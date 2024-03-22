@@ -77,7 +77,18 @@ public class RedisClient implements Runnable{
                         dos.write(response.getBytes(StandardCharsets.UTF_8));
                         i+=2;
                         System.out.println("Enters to get");
-                    }else{
+                    } else if(redisCommand.equalsIgnoreCase("-p")){
+                        int portNumber = Integer.parseInt(redisInputPieces.get(i+1));
+                        System.out.println("Port information will be given "+portNumber);
+                        i+=2;
+                    } else if(redisCommand.equalsIgnoreCase("info")){
+                        if(redisInputPieces.get(i+1).equalsIgnoreCase("replication")){
+                            String response = parseResponseIntoRESPBulk("role:master");
+                            dos.write(response.getBytes(StandardCharsets.UTF_8));
+                        }
+                        i+=2;
+                    }
+                    else{
                         System.out.println("Invalid Case");
                     }
                 }
