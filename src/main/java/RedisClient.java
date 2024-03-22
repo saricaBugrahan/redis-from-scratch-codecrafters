@@ -2,12 +2,14 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
-
+import java.util.Date;
 public class RedisClient implements Runnable{
 
-    static public ConcurrentHashMap<String,String> redisKeyValuePair = new ConcurrentHashMap();
+    static public ConcurrentHashMap<String,String> redisKeyValuePair = new ConcurrentHashMap<>();
+
+    static public ConcurrentHashMap<String,Long[]> redisKeyTimeoutPair = new ConcurrentHashMap<>();
+
     private Socket clientSocket;
     private int redisInputCommandCount;
 
@@ -22,6 +24,9 @@ public class RedisClient implements Runnable{
     }
 
     private String parseResponseIntoRESPBulk(String response){
+        if(response == null){
+            return "$-1\r\n";
+        }
         return "$"+response.length()+"\r\n"+response+"\r\n";
     }
 
@@ -51,7 +56,6 @@ public class RedisClient implements Runnable{
                         i++;
                     } else if (redisCommand.equalsIgnoreCase("echo")) {
                         String response = parseResponseIntoRESPBulk(redisInputPieces.get(i+1));
-
                         dos.write(response.getBytes(StandardCharsets.UTF_8));
                         i+=2;
                     } else if (redisCommand.equalsIgnoreCase("set")) {
@@ -59,15 +63,22 @@ public class RedisClient implements Runnable{
                         String response = parseResponseIntoRESPBulk("OK");
                         dos.write(response.getBytes(StandardCharsets.UTF_8));
                         System.out.println("Enter the set");
+                        if (i+3< redisInputPieces.size() && redisInputPieces.get(i+3).equalsIgnoreCase("px")){
+                            redisKeyTimeoutPair.put(redisInputPieces.get(i+1),
+                                    new Long[]{Long.parseLong(redisInputPieces.get(i + 4)),new Date().getTime()});
+                            i+=5;
+                        }
+                        else{
+                            i+=3;
+                        }
 
-                        i+=3;
                     } else if (redisCommand.equalsIgnoreCase("get")) {
                         String response = parseResponseIntoRESPBulk(redisKeyValuePair.get(redisInputPieces.get(i+1)));
                         dos.write(response.getBytes(StandardCharsets.UTF_8));
                         i+=2;
                         System.out.println("Enters to get");
                     }else{
-                        System.out.println("Invalid Case");
+                        //System.out.println("Invalid Case");
                     }
                 }
             }

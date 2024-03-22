@@ -17,10 +17,11 @@ public class Main {
             // ensures that we don't run into 'Address already in use' errors
             serverSocket.setReuseAddress(true);
             // Wait for connection from client.
+            RedisTimeoutListener redisTimeoutListener = new RedisTimeoutListener();
+            new Thread(redisTimeoutListener).start();
             while (true){
                 clientSocket = serverSocket.accept();
-                Thread responseThread = new Thread(new RedisClient(clientSocket));
-                responseThread.start();
+                new Thread(new RedisClient(clientSocket)).start();
             }
 
         } catch (IOException e) {
