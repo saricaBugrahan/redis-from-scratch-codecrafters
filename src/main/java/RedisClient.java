@@ -78,7 +78,7 @@ public class RedisClient implements Runnable{
                         i+=2;
                         System.out.println("Enters to get");
                     }else{
-                        //System.out.println("Invalid Case");
+                        System.out.println("Invalid Case");
                     }
                 }
             }

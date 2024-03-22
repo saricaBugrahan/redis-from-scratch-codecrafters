@@ -4,6 +4,8 @@ import java.net.Socket;
 import java.util.HashMap;
 
 public class Main {
+
+
   public static void main(String[] args){
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     System.out.println("Logs from your program will appear here!");
@@ -11,6 +13,15 @@ public class Main {
         ServerSocket serverSocket = null;
         Socket clientSocket = null;
         int port = 6379;
+        for(int i = 0;i< args.length;i++){
+            if(args[i].equalsIgnoreCase("--port")){
+                try{
+                    port = Integer.parseInt(args[i+1]);
+                } catch (IndexOutOfBoundsException indexOutOfBoundsException){
+                    System.out.println("Port tag used but not entered");
+                }
+            }
+        }
         try {
             serverSocket = new ServerSocket(port);
             // Since the tester restarts your program quite often, setting SO_REUSEADDR
