@@ -16,7 +16,6 @@ public class RedisReplicaServer {
 
     private  Socket socket;
 
-    private ConcurrentHashMap<String,String> listOfKeyValuePair = new ConcurrentHashMap();
 
     private RedisCommandHandler redisCommandHandler;
 
