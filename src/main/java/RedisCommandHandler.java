@@ -84,6 +84,10 @@ public class RedisCommandHandler implements CommandHandler{
             case "replconf":
                 sendResponse(dataOutputStream,"OK");
                 break;
+            case "psync":
+                sendResponse(dataOutputStream,"FULLRESYNC %s %s"
+                        .formatted(RedisServerConfiguration.replicationInfo.get("master_replid"),
+                                RedisServerConfiguration.replicationInfo.get("master_repl_offset")));
         }
     }
 
