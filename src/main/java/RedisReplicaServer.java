@@ -50,6 +50,7 @@ public class RedisReplicaServer {
                 break;
             } else if (responseOfMaster.equalsIgnoreCase("+OK")){
                 System.out.println("Response is OK");
+                break;
             }
         }
         return responseOfMasterArrayList;
