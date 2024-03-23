@@ -45,7 +45,7 @@ public class RedisServerConfiguration {
             else if(args[i].equalsIgnoreCase("--replicaof")){
                 try {
                     this.role = "slave";
-                    redisReplicaServer = new RedisReplicaServer(args[++i],Integer.parseInt(args[++i]));
+                    redisReplicaServer = new RedisReplicaServer(args[++i],Integer.parseInt(args[++i]),portNumber);
                 } catch (IndexOutOfBoundsException indexOutOfBoundsException){
                     System.out.println("Replicaof tag is used with not appropriate number of arguments");
                 }
