@@ -16,6 +16,9 @@ public class RedisEncoder {
         }
         return response.toString();
     }
+    public String parseResponseRDB(String rdb){
+        return "$"+rdb.length()+"\r\n"+rdb;
+    }
 
 
 }

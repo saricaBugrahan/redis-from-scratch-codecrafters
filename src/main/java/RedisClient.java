@@ -38,6 +38,9 @@ public class RedisClient implements Runnable{
                         }
                     }
                 }
+                else{
+                    System.out.println(redisInputString);
+                }
 
                 redisCommandHandler.outputHandler(dos,redisInputPieces);
             }

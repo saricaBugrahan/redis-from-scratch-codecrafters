@@ -2,6 +2,8 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -11,10 +13,6 @@ public class RedisCommandHandler implements CommandHandler{
         redisEncoder = new RedisEncoder();
     }
 
-    @Override
-    public List<String> inputHandler(BufferedReader bufferedReader) {
-        return null;
-    }
 
     @Override
     public void sendResponse(DataOutputStream dataOutputStream, String response) throws IOException {
@@ -31,6 +29,12 @@ public class RedisCommandHandler implements CommandHandler{
     @Override
     public void sendResponsePing(DataOutputStream dataOutputStream, List<String> response) throws IOException {
         dataOutputStream.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void sendRDB(DataOutputStream dataOutputStream,String prefix ,byte[] rdb) throws IOException {
+        dataOutputStream.write(prefix.getBytes(StandardCharsets.UTF_8));
+        dataOutputStream.write(rdb);
     }
 
     @Override
@@ -88,6 +92,10 @@ public class RedisCommandHandler implements CommandHandler{
                 sendResponse(dataOutputStream,"FULLRESYNC %s %s"
                         .formatted(RedisServerConfiguration.replicationInfo.get("master_replid"),
                                 RedisServerConfiguration.replicationInfo.get("master_repl_offset")));
+                String b64EmptyRDB ="UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+                byte[] rdbBytes = Base64.getDecoder().decode(b64EmptyRDB);
+                sendRDB(dataOutputStream,"$"+rdbBytes.length+"\r\n",rdbBytes);
+                break;
         }
     }
 
