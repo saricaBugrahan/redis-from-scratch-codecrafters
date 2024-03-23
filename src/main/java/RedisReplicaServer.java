@@ -45,10 +45,10 @@ public class RedisReplicaServer {
                         responseOfMasterArrayList.add(responseOfMaster);
                     }
                 }
-            } else if(responseOfMaster.equalsIgnoreCase("PONG")){
+            } else if(responseOfMaster.equalsIgnoreCase("+PONG")){
                 System.out.println("Response is Pong");
                 break;
-            } else if (responseOfMaster.equalsIgnoreCase("OK")){
+            } else if (responseOfMaster.equalsIgnoreCase("+OK")){
                 System.out.println("Response is OK");
             }
         }
