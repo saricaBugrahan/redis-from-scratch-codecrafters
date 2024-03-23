@@ -32,16 +32,18 @@ public class RedisClient implements Runnable{
                     redisInputPieces = new ArrayList<>();
                     for (int i = 0; i < redisInputCommandCount * 2; i++) {
                         redisInputString = dis.readLine();
+                        System.out.println(redisInputString);
                         if (!redisInputString.startsWith("$")) {
-                            redisInputPieces.add(redisInputString);
+                            redisInputPieces.add(redisInputString.toLowerCase());
                         }
                     }
                 }
+
                 redisCommandHandler.outputHandler(dos,redisInputPieces);
             }
             dis.close();
             dos.close();
-            clientSocket.close();
+            //clientSocket.close();
         }
         catch (IOException e){
             System.out.println("IOException: " + e.getMessage());

@@ -36,13 +36,12 @@ public class RedisReplicaServer {
         String responseOfMaster;
         ArrayList<String> responseOfMasterArrayList = null;
         while ((responseOfMaster = bufferedReader.readLine())!= null){
-            System.out.println(responseOfMaster);
             if (responseOfMaster.startsWith("*")) {
                 int lenResponseOfMaster = redisCommandHandler.getCommandLength(responseOfMaster);
                 responseOfMasterArrayList = new ArrayList<>();
                 for (int i = 0; i < lenResponseOfMaster * 2; i++) {
                     if (!responseOfMaster.startsWith("$")) {
-                        responseOfMasterArrayList.add(responseOfMaster);
+                        responseOfMasterArrayList.add(responseOfMaster.toLowerCase());
                     }
                 }
             } else if(responseOfMaster.equalsIgnoreCase("+PONG")){

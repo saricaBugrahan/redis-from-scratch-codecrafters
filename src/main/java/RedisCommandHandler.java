@@ -65,6 +65,7 @@ public class RedisCommandHandler implements CommandHandler{
                 }else{
                     sendResponse(dataOutputStream,value);
                 }
+                break;
             case "info":
                 if(list.get(1).equalsIgnoreCase("replication")){
                     String replication = """
@@ -79,7 +80,10 @@ public class RedisCommandHandler implements CommandHandler{
                             RedisServerConfiguration.replicationInfo.get("master_repl_offset"));
                     sendResponse(dataOutputStream,replication);
                 }
-
+                break;
+            case "replconf":
+                sendResponse(dataOutputStream,"OK");
+                break;
         }
     }
 
