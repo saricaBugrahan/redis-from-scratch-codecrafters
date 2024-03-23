@@ -1,15 +1,22 @@
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RedisReplicaServer {
 
-    private final String masterHost;
+    private  String masterHost;
 
-    private final int masterPort;
+    private  int masterPort;
 
-    private final int portNumber;
+    private  int portNumber;
+
+    private  Socket socket;
+
+    private ConcurrentHashMap<String,String> listOfKeyValuePair = new ConcurrentHashMap();
 
     private RedisCommandHandler redisCommandHandler;
 
@@ -18,23 +25,37 @@ public class RedisReplicaServer {
         this.masterPort = masterPort;
         this.portNumber = portNumber;
         this.redisCommandHandler = new RedisCommandHandler();
+        this.socket = null;
+    }
+
+    RedisReplicaServer(Socket socket){
+
+        this.redisCommandHandler = new RedisCommandHandler();
+        this.socket = socket;
     }
 
     public void connectToMaster() throws IOException {
         Socket masterSocket = new Socket(this.masterHost,this.masterPort);
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(masterSocket.getInputStream()));
         DataOutputStream dataOutputStream = new DataOutputStream(masterSocket.getOutputStream());
-        sendAndGetResponseOfMaster(bufferedReader,dataOutputStream, List.of("ping"));
-        sendAndGetResponseOfMaster(bufferedReader,dataOutputStream,List.of(new String[]{"REPLCONF", "listening-port", String.valueOf(portNumber)}));
-        sendAndGetResponseOfMaster(bufferedReader,dataOutputStream,List.of(new String[]{"REPLCONF", "capa-port", "psync2"}));
-        sendAndGetResponseOfMaster(bufferedReader,dataOutputStream,List.of(new String[]{"PSYNC", "?", "-1"}));
+        sendCommand(dataOutputStream, List.of("ping"));
+        getResponseOfMaster(bufferedReader);
+        sendCommand(dataOutputStream,List.of(new String[]{"REPLCONF", "listening-port", String.valueOf(portNumber)}));
+        getResponseOfMaster(bufferedReader);
+        sendCommand(dataOutputStream,List.of(new String[]{"REPLCONF", "capa-port", "psync2"}));
+        getResponseOfMaster(bufferedReader);
+        sendCommand(dataOutputStream,List.of(new String[]{"PSYNC", "?", "-1"}));
+        getResponseOfMaster(bufferedReader);
         masterSocket.close();
     }
 
-    public List<String> sendAndGetResponseOfMaster(BufferedReader bufferedReader, DataOutputStream dataOutputStream, List<String> list) throws IOException {
+    public void sendCommand(DataOutputStream dataOutputStream, List<String> list) throws IOException {
         redisCommandHandler.sendResponse(dataOutputStream,list);
+    }
+
+    public List<String> getResponseOfMaster(BufferedReader bufferedReader) throws IOException {
         String responseOfMaster;
-        ArrayList<String> responseOfMasterArrayList = null;
+        ArrayList<String> responseOfMasterArrayList = new ArrayList<>();
         while ((responseOfMaster = bufferedReader.readLine())!= null){
             if (responseOfMaster.startsWith("*")) {
                 int lenResponseOfMaster = redisCommandHandler.getCommandLength(responseOfMaster);
@@ -53,6 +74,15 @@ public class RedisReplicaServer {
             }
         }
         return responseOfMasterArrayList;
+    }
+
+    public void sendCommand(ArrayList<String> arrayList) throws IOException {
+
+        System.out.println("Send Command");
+        DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
+        this.redisCommandHandler.sendResponse(dos,arrayList);
+
+
     }
 
 

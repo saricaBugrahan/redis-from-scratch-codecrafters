@@ -6,9 +6,13 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RedisCommandHandler implements CommandHandler{
     private RedisEncoder redisEncoder;
+
+    private final String b64EmptyRDB ="UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+
     public RedisCommandHandler(){
         redisEncoder = new RedisEncoder();
     }
@@ -44,7 +48,7 @@ public class RedisCommandHandler implements CommandHandler{
 
 
     @Override
-    public void outputHandler(DataOutputStream dataOutputStream, List<String> list) throws IOException {
+    public void outputHandler(DataOutputStream dataOutputStream, List<String> list, boolean isReplica, ConcurrentHashMap<String,String> keyValuePair) throws IOException {
         String command = list.get(0);
         switch (command){
             case "ping":
@@ -54,15 +58,15 @@ public class RedisCommandHandler implements CommandHandler{
                 sendResponse(dataOutputStream,list.get(1));
                 break;
             case "set":
-                RedisClient.redisKeyValuePair.put(list.get(1),list.get(2));
+                keyValuePair.put(list.get(1),list.get(2));
                 if(list.size()>3 && list.get(3).equalsIgnoreCase("px")){
                     RedisClient.redisKeyTimeoutPair.put(list.get(1),
                             new Long[]{Long.parseLong(list.get(4)),new Date().getTime()});
                 }
-                sendResponse(dataOutputStream,"OK");
+                if(!isReplica)sendResponse(dataOutputStream,"OK");
                 break;
             case "get":
-                String value = RedisClient.redisKeyValuePair.getOrDefault(list.get(1),"null");
+                String value = keyValuePair.getOrDefault(list.get(1),"null");
                 if(value.equalsIgnoreCase("null")){
 
                     sendResponse(dataOutputStream,"null");
@@ -92,7 +96,6 @@ public class RedisCommandHandler implements CommandHandler{
                 sendResponse(dataOutputStream,"FULLRESYNC %s %s"
                         .formatted(RedisServerConfiguration.replicationInfo.get("master_replid"),
                                 RedisServerConfiguration.replicationInfo.get("master_repl_offset")));
-                String b64EmptyRDB ="UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
                 byte[] rdbBytes = Base64.getDecoder().decode(b64EmptyRDB);
                 sendRDB(dataOutputStream,"$"+rdbBytes.length+"\r\n",rdbBytes);
                 break;
