@@ -20,13 +20,6 @@ public class RedisClient implements Runnable{
         this.clientSocket = clientSocket;
         redisCommandHandler = new RedisCommandHandler();
     }
-
-
-
-    //TODO: Does not need an while loop, configure into function with interface
-    //TODO: Create an enum for the Key values
-    //TODO: Input Stream and Output Stream needs to be separate functions.
-    //TODO: Check the naming conventions and class variables.
     @Override
     public void run() {
         try{
