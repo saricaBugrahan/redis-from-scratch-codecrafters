@@ -21,9 +21,7 @@ public class RedisClient implements Runnable{
         redisCommandHandler = new RedisCommandHandler();
     }
 
-    private int getCommandLength(String command){
-        return Integer.parseInt(command.substring(1).replace("\r\n",""));
-    }
+
 
     //TODO: Does not need an while loop, configure into function with interface
     //TODO: Create an enum for the Key values
@@ -37,7 +35,7 @@ public class RedisClient implements Runnable{
             String redisInputString;
             while ((redisInputString = dis.readLine())!= null){
                 if (redisInputString.startsWith("*")) {
-                    redisInputCommandCount = getCommandLength(redisInputString);
+                    redisInputCommandCount = redisCommandHandler.getCommandLength(redisInputString);
                     redisInputPieces = new ArrayList<>();
                     for (int i = 0; i < redisInputCommandCount * 2; i++) {
                         redisInputString = dis.readLine();

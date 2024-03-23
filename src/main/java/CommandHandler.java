@@ -10,6 +10,7 @@ public interface CommandHandler {
     void sendResponse(DataOutputStream dataOutputStream,String response) throws IOException;
     void sendResponse(DataOutputStream dataOutputStream,List<String> response) throws IOException;
     void sendResponsePing(DataOutputStream dataOutputStream,List<String> response) throws IOException;
+    int getCommandLength(String input);
 
 
 }

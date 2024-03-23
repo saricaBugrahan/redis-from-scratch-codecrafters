@@ -33,6 +33,11 @@ public class RedisCommandHandler implements CommandHandler{
         dataOutputStream.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
     }
 
+    @Override
+    public int getCommandLength(String command){
+        return Integer.parseInt(command.substring(1).replace("\r\n",""));
+    }
+
 
     @Override
     public void outputHandler(DataOutputStream dataOutputStream, List<String> list) throws IOException {
