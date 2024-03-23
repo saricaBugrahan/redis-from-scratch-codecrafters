@@ -10,28 +10,25 @@ public class RedisClient implements Runnable{
 
     static public ConcurrentHashMap<String,Long[]> redisKeyTimeoutPair = new ConcurrentHashMap<>();
 
-    private Socket clientSocket;
+    private final Socket clientSocket;
     private int redisInputCommandCount;
-
-    private String redisRole;
     private ArrayList<String> redisInputPieces;
 
-    public RedisClient(Socket clientSocket,String redisRole){
+    private RedisCommandHandler redisCommandHandler;
+
+    public RedisClient(Socket clientSocket){
         this.clientSocket = clientSocket;
-        this.redisRole = redisRole;
+        redisCommandHandler = new RedisCommandHandler();
     }
 
     private int getCommandLength(String command){
         return Integer.parseInt(command.substring(1).replace("\r\n",""));
     }
 
-    private String parseResponseIntoRESPBulk(String response){
-        if(response == null){
-            return "$-1\r\n";
-        }
-        return "$"+response.length()+"\r\n"+response+"\r\n";
-    }
-
+    //TODO: Does not need an while loop, configure into function with interface
+    //TODO: Create an enum for the Key values
+    //TODO: Input Stream and Output Stream needs to be separate functions.
+    //TODO: Check the naming conventions and class variables.
     @Override
     public void run() {
         try{
@@ -49,59 +46,7 @@ public class RedisClient implements Runnable{
                         }
                     }
                 }
-                redisInputPieces.forEach(System.out::println);
-                int i = 0;
-                while(i<redisInputPieces.size()){
-                    String redisCommand = redisInputPieces.get(i);
-                    if (redisCommand.equalsIgnoreCase("ping")) {
-                        dos.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
-                        i++;
-                    } else if (redisCommand.equalsIgnoreCase("echo")) {
-                        String response = parseResponseIntoRESPBulk(redisInputPieces.get(i+1));
-                        dos.write(response.getBytes(StandardCharsets.UTF_8));
-                        i+=2;
-
-                    } else if (redisCommand.equalsIgnoreCase("set")) {
-                        redisKeyValuePair.put(redisInputPieces.get(i+1), redisInputPieces.get(i+2));
-                        String response = parseResponseIntoRESPBulk("OK");
-                        dos.write(response.getBytes(StandardCharsets.UTF_8));
-                        System.out.println("Enter the set");
-                        if (i+3< redisInputPieces.size() && redisInputPieces.get(i+3).equalsIgnoreCase("px")){
-                            redisKeyTimeoutPair.put(redisInputPieces.get(i+1),
-                                    new Long[]{Long.parseLong(redisInputPieces.get(i + 4)),new Date().getTime()});
-                            i+=5;
-                        }
-                        else{
-                            i+=3;
-                        }
-
-                    } else if (redisCommand.equalsIgnoreCase("get")) {
-                        String response = parseResponseIntoRESPBulk(redisKeyValuePair.get(redisInputPieces.get(i+1)));
-                        dos.write(response.getBytes(StandardCharsets.UTF_8));
-                        i+=2;
-                        System.out.println("Enters to get");
-
-                    } else if(redisCommand.equalsIgnoreCase("-p")){
-                        int portNumber = Integer.parseInt(redisInputPieces.get(i+1));
-                        System.out.println("Port information will be given "+portNumber);
-                        i+=2;
-
-                    } else if(redisCommand.equalsIgnoreCase("info")){
-                        if(redisInputPieces.get(i+1).equalsIgnoreCase("replication")){
-
-                            String response = parseResponseIntoRESPBulk(
-                                    "role:%s\n".formatted(redisRole) +
-                                            "master_replid:%s\n".formatted("8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb") +
-                                            "master_repl_offset:%s\n".formatted("0")
-                            );
-                            dos.write(response.getBytes(StandardCharsets.UTF_8));
-                        }
-                        i+=2;
-
-                    } else{
-                        System.out.println("Invalid Case");
-                    }
-                }
+                redisCommandHandler.outputHandler(dos,redisInputPieces);
             }
             dis.close();
             dos.close();

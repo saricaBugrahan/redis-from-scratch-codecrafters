@@ -1,54 +1,30 @@
-import java.io.*;
+import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashMap;
 
 public class Main {
 
 
-  public static void main(String[] args){
-        ServerSocket serverSocket = null;
-        Socket clientSocket = null;
-        int port = 6379;
-        String masterHost;
-        String masterPort;
-        String role="master";
-
-        for(int i = 0;i< args.length;){
-            if(args[i].equalsIgnoreCase("--port")){
-                try{
-                    port = Integer.parseInt(args[i+1]);
-                    i+=2;
-                } catch (IndexOutOfBoundsException indexOutOfBoundsException){
-                    System.out.println("Port tag used but not entered");
-                }
-            }
-            else if(args[i].equalsIgnoreCase("--replicaof")){
-                try {
-                    masterHost = args[i+1];
-                    masterPort = args[i+2];
-                    role = "slave";
-                    i+=3;
-                } catch (IndexOutOfBoundsException indexOutOfBoundsException){
-                    System.out.println("Replicaof tag is used with not appropriate number of arguments");
-                }
-            }else{
-                i+=1;
-            }
-
+  public static void main(String[] args) throws IOException {
+        ServerSocket serverSocket;
+        RedisServerConfiguration redisServerConfiguration = new RedisServerConfiguration(args);
+        if (redisServerConfiguration.getRole().equalsIgnoreCase("slave")){
+            redisServerConfiguration.getRedisReplicaServer().connectToMaster();
         }
-        try {
-            serverSocket = new ServerSocket(port);
-            serverSocket.setReuseAddress(true);
-            RedisTimeoutListener redisTimeoutListener = new RedisTimeoutListener();
-            new Thread(redisTimeoutListener).start();
-            while (true){
-                clientSocket = serverSocket.accept();
-                new Thread(new RedisClient(clientSocket,role)).start();
-            }
+        RedisTimeoutListener redisTimeoutListener = new RedisTimeoutListener();
+        new Thread(redisTimeoutListener).start();
+        try{
+          serverSocket = new ServerSocket(redisServerConfiguration.getPortNumber());
+          serverSocket.setReuseAddress(true);
 
-        } catch (IOException e) {
-          System.out.println("IOException: " + e.getMessage());
+          while (true){
+              new Thread(new RedisClient(serverSocket.accept())).start();
+          }
+        }catch (Exception exception){
+          System.out.println("Exception on main");
         }
+
+
+
+
   }
 }
