@@ -145,6 +145,9 @@ public class RedisRDBImpl {
     public int checkValidityRedisStreamKeyID(String streamKey,String id){
         LinkedList<RedisStreamEntryRecord> redisStreamEntryRecordLinkedList = redisStream.get(streamKey);
         for(RedisStreamEntryRecord stream : redisStreamEntryRecordLinkedList){
+            if (id.endsWith("*")){
+                return 1;
+            }
             if (id.equalsIgnoreCase("0-0"))
                 return -1;
             if (id.equalsIgnoreCase(stream.id()))
@@ -155,6 +158,35 @@ public class RedisRDBImpl {
                 return 0;
         }
         return 1;
+    }
+    public String getIDFromStar(String  ID,boolean initial,String masterKey){
+        if (ID.length() != 1){
+            if (!initial){
+                return ID.split("-")[0] +"-" + (getHighestSequenceNumber(masterKey,ID)+1);
+            }else
+                if (ID.split("-")[0].equals("0")){
+                    return ID.split("-")[0] +"-"+ 1;
+                } else
+                    return ID.split("-")[0] +"-"+ 0;
+        }
+        return "";
+    }
+    public boolean checkInitial(String master,String ID){
+        LinkedList<RedisStreamEntryRecord> redisStreamEntryRecordLinkedList = redisStream.get(master);
+        for(RedisStreamEntryRecord record: redisStreamEntryRecordLinkedList){
+            if (record.id().split("-")[0].equalsIgnoreCase(ID.split("-")[0]))
+                return false;
+        }
+        return true;
+    }
+    public int getHighestSequenceNumber(String master, String ID){
+        LinkedList<RedisStreamEntryRecord> redisStreamEntryRecordLinkedList = redisStream.get(master);
+        LinkedList<Integer> idListStartsWithSameID = new LinkedList<>();
+        for(RedisStreamEntryRecord record: redisStreamEntryRecordLinkedList){
+            if (record.id().split("-")[0].equalsIgnoreCase(ID.split("-")[0]))
+                idListStartsWithSameID.add(Integer.parseInt(record.id().split("-")[1]));
+        }
+        return idListStartsWithSameID.stream().max(Integer::compare).get();
 
     }
 }
