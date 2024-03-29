@@ -11,12 +11,14 @@ public class RedisTimeoutListener implements Runnable{
     @Override
     public void run() {
         while (true){
-            if(!RedisClient.redisKeyTimeoutPair.isEmpty()){
-                this.currentDate = new Date();
-                for(Map.Entry<String,Long[]> pair: RedisClient.redisKeyTimeoutPair.entrySet()){
-                    long timeDifference = this.currentDate.getTime() - pair.getValue()[1];
-                    if(timeDifference > pair.getValue()[0]){
-                        RedisClient.redisKeyValuePair.remove(pair.getKey());
+            this.currentDate = new Date();
+            if (!RedisRDBImpl.redisRBDMap.isEmpty()){
+                for (Map.Entry<String, RedisRDBEntryRecord> pair : RedisRDBImpl.redisRBDMap.entrySet()){
+                    if (pair.getValue().expireDuration() != 0L){
+                        long time_difference = this.currentDate.getTime() - pair.getValue().currentTime();
+                        if (time_difference> pair.getValue().expireDuration()){
+                            RedisRDBImpl.redisRBDMap.remove(pair.getKey());
+                        }
                     }
                 }
             }

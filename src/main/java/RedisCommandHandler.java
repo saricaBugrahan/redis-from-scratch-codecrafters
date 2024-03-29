@@ -1,17 +1,19 @@
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public class RedisCommandHandler implements CommandHandler{
-    private RedisEncoder redisEncoder;
+    private final RedisEncoder redisEncoder;
 
-    private final String b64EmptyRDB ="UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
+    public static int ACK = 0;
+    public static int noCommandReplicaCounter =0;
+
+    public static boolean noCommandFromMaster = true;
+
+    public static int commandReplicaCounter = 0;
+
+    public RedisRDBImpl redisRDB;
 
     public RedisCommandHandler(){
         redisEncoder = new RedisEncoder();
@@ -27,6 +29,12 @@ public class RedisCommandHandler implements CommandHandler{
     @Override
     public void sendResponse(DataOutputStream dataOutputStream, List<String> response) throws IOException {
         String dataToSend = redisEncoder.parseResponseIntoRESPBulk(response);
+        dataOutputStream.write(dataToSend.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void sendResponse(DataOutputStream dataOutputStream, int number) throws IOException {
+        String dataToSend = redisEncoder.parseResponseIntoRESPBulk(number);
         dataOutputStream.write(dataToSend.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -48,30 +56,38 @@ public class RedisCommandHandler implements CommandHandler{
 
 
     @Override
-    public void outputHandler(DataOutputStream dataOutputStream, List<String> list, boolean isReplica, ConcurrentHashMap<String,String> keyValuePair) throws IOException {
+    public void outputHandler(DataOutputStream dataOutputStream, List<String> list, boolean isReplica) throws IOException {
         String command = list.get(0);
+        String b64EmptyRDB = "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==";
         switch (command){
             case "ping":
-                sendResponsePing(dataOutputStream,list);
+                if(!isReplica)sendResponsePing(dataOutputStream,list);
                 break;
             case "echo":
                 sendResponse(dataOutputStream,list.get(1));
                 break;
             case "set":
-                keyValuePair.put(list.get(1),list.get(2));
+                //RedisClient.redisKeyValuePair.put(list.get(1),list.get(2));
                 if(list.size()>3 && list.get(3).equalsIgnoreCase("px")){
-                    RedisClient.redisKeyTimeoutPair.put(list.get(1),
-                            new Long[]{Long.parseLong(list.get(4)),new Date().getTime()});
+                    RedisRDBImpl.redisRBDMap.put(list.get(1),new RedisRDBEntryRecord(
+                            Long.parseLong(list.get(4)), new Date().getTime(), 0, list.get(1), list.get(2)
+                    ));
+                } else{
+                    RedisRDBImpl.redisRBDMap.put((list.get(1)),new RedisRDBEntryRecord(
+                            0L, new Date().getTime(), 0, list.get(1), list.get(2)
+                    ));
                 }
-                if(!isReplica)sendResponse(dataOutputStream,"OK");
+                if(!isReplica){
+                    sendResponse(dataOutputStream,"OK");
+                    noCommandFromMaster = false;
+                }
                 break;
             case "get":
-                String value = keyValuePair.getOrDefault(list.get(1),"null");
-                if(value.equalsIgnoreCase("null")){
-
+                String redisRDBValue= redisRDB.getValue(list.get(1));
+                if(redisRDBValue.equalsIgnoreCase("null")){
                     sendResponse(dataOutputStream,"null");
                 }else{
-                    sendResponse(dataOutputStream,value);
+                    sendResponse(dataOutputStream,redisRDBValue);
                 }
                 break;
             case "info":
@@ -90,7 +106,14 @@ public class RedisCommandHandler implements CommandHandler{
                 }
                 break;
             case "replconf":
-                sendResponse(dataOutputStream,"OK");
+                if (list.get(1).equalsIgnoreCase("getack")){
+                    sendResponse(dataOutputStream,List.of("REPLCONF","ACK",String.valueOf(ACK)));
+                } else if (list.get(1).equalsIgnoreCase("ack")){
+                    System.out.println("ack retrieved from slave");
+                    commandReplicaCounter++;
+                } else{
+                    sendResponse(dataOutputStream,"OK");
+                }
                 break;
             case "psync":
                 sendResponse(dataOutputStream,"FULLRESYNC %s %s"
@@ -99,8 +122,44 @@ public class RedisCommandHandler implements CommandHandler{
                 byte[] rdbBytes = Base64.getDecoder().decode(b64EmptyRDB);
                 sendRDB(dataOutputStream,"$"+rdbBytes.length+"\r\n",rdbBytes);
                 break;
+            case "wait":
+                int expectedNumberOfSlaves = Integer.parseInt(list.get(1));
+                long expectedWaitDuration  = Long.parseLong(list.get(2));
+                if(noCommandFromMaster){
+                    sendResponse(dataOutputStream,noCommandReplicaCounter);
+                } else{
+                    new RedisReplicaACKWaitHandler(expectedNumberOfSlaves,expectedWaitDuration).waitForACK();
+                    sendResponse(dataOutputStream,commandReplicaCounter);
+                    commandReplicaCounter = 0;
+                }
+                break;
+            case "config":
+                if(list.get(1).equalsIgnoreCase("get") && list.get(2).equalsIgnoreCase("dir")){
+                    sendResponse(dataOutputStream,List.of("dir",redisRDB.getRDBDirectory()));
+                } else if(list.get(1).equalsIgnoreCase("get") && list.get(2).equalsIgnoreCase("dbfilename")){
+                    sendResponse(dataOutputStream,List.of("dbfilename",redisRDB.getRDBFilename()));
+                } else{
+                    System.out.println("Unknown parameter after config command");
+                }
+                break;
+            case "keys":
+                if (list.get(1).equalsIgnoreCase("*")){
+                    sendResponse(dataOutputStream, Collections.list(redisRDB.getKeys()));
+                }
+                break;
+            default:
+                System.out.println("Unknown Command "+command);
+                break;
         }
     }
 
-    
+    public RedisRDBImpl getRedisRDB() {
+        return redisRDB;
+    }
+
+    public void setRedisRDB(RedisRDBImpl redisRDB) {
+        this.redisRDB = redisRDB;
+    }
+
+
 }

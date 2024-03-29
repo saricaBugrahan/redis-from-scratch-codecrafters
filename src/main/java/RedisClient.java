@@ -1,26 +1,26 @@
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Date;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 public class RedisClient implements Runnable{
 
-    static public ConcurrentHashMap<String,String> redisKeyValuePair = new ConcurrentHashMap<>();
 
-    static public ConcurrentHashMap<String,Long[]> redisKeyTimeoutPair = new ConcurrentHashMap<>();
+    static public CopyOnWriteArrayList<RedisReplicaServer> redisReplicaServers = new CopyOnWriteArrayList<>();
 
-    static public ArrayList<RedisReplicaServer> redisReplicaServers = new ArrayList<>();
+    public  static  int RESPOND_REPLICA_COUNTER=0;
     private final Socket clientSocket;
 
-    private int redisInputCommandCount;
     private ArrayList<String> redisInputPieces;
 
-    private RedisCommandHandler redisCommandHandler;
+    private final RedisCommandHandler redisCommandHandler;
 
-    public RedisClient(Socket clientSocket){
+    public RedisClient(Socket clientSocket,RedisRDBImpl redisRDB){
         this.clientSocket = clientSocket;
         redisCommandHandler = new RedisCommandHandler();
+        redisCommandHandler.setRedisRDB(redisRDB);
+        redisRDB.readRDB();
     }
     @Override
     public void run() {
@@ -30,7 +30,7 @@ public class RedisClient implements Runnable{
             String redisInputString;
             while ((redisInputString = dis.readLine())!= null){
                 if (redisInputString.startsWith("*")) {
-                    redisInputCommandCount = redisCommandHandler.getCommandLength(redisInputString);
+                    int redisInputCommandCount = redisCommandHandler.getCommandLength(redisInputString);
                     redisInputPieces = new ArrayList<>();
                     for (int i = 0; i < redisInputCommandCount * 2; i++) {
                         redisInputString = dis.readLine();
@@ -40,15 +40,28 @@ public class RedisClient implements Runnable{
                     }
                 }
                 if(redisInputPieces.get(0).equalsIgnoreCase("PSYNC") ){
-                    //Replica connected
                     redisReplicaServers.add(new RedisReplicaServer(clientSocket));
+                    RedisCommandHandler.noCommandReplicaCounter++;
                 }
-                if(redisInputPieces.get(0).equalsIgnoreCase("SET")){
+                if(redisInputPieces.get(0).equalsIgnoreCase("set")){
+
                     for(RedisReplicaServer replicaServer : redisReplicaServers){
-                        replicaServer.sendCommand(redisInputPieces);
+                        replicaServer.sendInstructionToMaster(redisInputPieces);
                     }
                 }
-                redisCommandHandler.outputHandler(dos,redisInputPieces,false,redisKeyValuePair);
+                if (redisInputPieces.get(0).equalsIgnoreCase("wait")){
+                    System.out.println("Replica Counter set to 0");
+                    RESPOND_REPLICA_COUNTER = 0;
+                    ArrayList<String> arr = new ArrayList<>();
+                    arr.add("REPLCONF");
+                    arr.add("GETACK");
+                    arr.add("*");
+                    for (RedisReplicaServer replicaServer: redisReplicaServers){
+                        replicaServer.sendInstructionToMaster(arr);
+                    }
+                }
+
+                redisCommandHandler.outputHandler(dos,redisInputPieces,false);
             }
             dis.close();
             dos.close();
@@ -56,6 +69,11 @@ public class RedisClient implements Runnable{
         }
         catch (IOException e){
             System.out.println("IOException: " + e.getMessage());
+            try {
+                clientSocket.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
         }
     }
 }

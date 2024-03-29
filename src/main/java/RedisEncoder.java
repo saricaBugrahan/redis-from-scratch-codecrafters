@@ -11,16 +11,14 @@ public class RedisEncoder {
 
     public String parseResponseIntoRESPBulk(List<String> list){
         StringBuilder response = new StringBuilder("*%d\r\n".formatted(list.size()));
-        for(int i = 0;i<list.size();i++){
-            response.append(parseResponseIntoRESPBulk(list.get(i)));
+        for (String s : list) {
+            response.append(parseResponseIntoRESPBulk(s));
         }
         return response.toString();
     }
-    public String parseResponseRDB(String rdb){
-        return "$"+rdb.length()+"\r\n"+rdb;
+    public String parseResponseIntoRESPBulk(int number){
+        return ":"+number+"\r\n";
     }
 
 
 }
-
-

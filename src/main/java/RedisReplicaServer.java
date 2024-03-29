@@ -1,91 +1,103 @@
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-public class RedisReplicaServer {
+public class RedisReplicaServer implements Runnable {
 
     private  String masterHost;
 
-    private  int masterPort;
+    public static int masterPort;
 
     private  int portNumber;
 
-    private  Socket socket;
+    private final Socket socket;
 
+    private final RedisCommandHandler redisCommandHandler;
 
-    private RedisCommandHandler redisCommandHandler;
-
-    RedisReplicaServer(String masterHost, int masterPort,int portNumber){
-        this.masterHost = masterHost;
-        this.masterPort = masterPort;
-        this.portNumber = portNumber;
-        this.redisCommandHandler = new RedisCommandHandler();
-        this.socket = null;
-    }
+    private final RedisEncoder redisEncoder;
 
     RedisReplicaServer(Socket socket){
 
         this.redisCommandHandler = new RedisCommandHandler();
         this.socket = socket;
+        this.redisEncoder = new RedisEncoder();
     }
 
     public void connectToMaster() throws IOException {
-        Socket masterSocket = new Socket(this.masterHost,this.masterPort);
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(masterSocket.getInputStream()));
-        DataOutputStream dataOutputStream = new DataOutputStream(masterSocket.getOutputStream());
-        sendCommand(dataOutputStream, List.of("ping"));
+        DataOutputStream dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+        sendInstructionToMaster(dataOutputStream, List.of("ping"));
         getResponseOfMaster(bufferedReader);
-        sendCommand(dataOutputStream,List.of(new String[]{"REPLCONF", "listening-port", String.valueOf(portNumber)}));
+        sendInstructionToMaster(dataOutputStream,List.of(new String[]{"REPLCONF", "listening-port", String.valueOf(RedisServerConfiguration.portNumber)}));
         getResponseOfMaster(bufferedReader);
-        sendCommand(dataOutputStream,List.of(new String[]{"REPLCONF", "capa-port", "psync2"}));
+        sendInstructionToMaster(dataOutputStream,List.of(new String[]{"REPLCONF", "capa","eof","capa", "psync2"}));
         getResponseOfMaster(bufferedReader);
-        sendCommand(dataOutputStream,List.of(new String[]{"PSYNC", "?", "-1"}));
-        getResponseOfMaster(bufferedReader);
-        masterSocket.close();
+        sendInstructionToMaster(dataOutputStream,List.of(new String[]{"PSYNC", "?", "-1"}));
     }
 
-    public void sendCommand(DataOutputStream dataOutputStream, List<String> list) throws IOException {
+    public void sendInstructionToMaster(DataOutputStream dataOutputStream, List<String> list) throws IOException {
         redisCommandHandler.sendResponse(dataOutputStream,list);
-    }
+        dataOutputStream.flush();
 
-    public List<String> getResponseOfMaster(BufferedReader bufferedReader) throws IOException {
+    }
+    public void getResponseOfMaster(BufferedReader bufferedReader) throws IOException {
         String responseOfMaster;
-        ArrayList<String> responseOfMasterArrayList = new ArrayList<>();
-        while ((responseOfMaster = bufferedReader.readLine())!= null){
+        ArrayList<String> responseOfMasterArrayList;
+        while ((responseOfMaster = bufferedReader.readLine()) != null) {
             if (responseOfMaster.startsWith("*")) {
                 int lenResponseOfMaster = redisCommandHandler.getCommandLength(responseOfMaster);
                 responseOfMasterArrayList = new ArrayList<>();
                 for (int i = 0; i < lenResponseOfMaster * 2; i++) {
+                    responseOfMaster = bufferedReader.readLine();
                     if (!responseOfMaster.startsWith("$")) {
                         responseOfMasterArrayList.add(responseOfMaster.toLowerCase());
                     }
+
                 }
-            } else if(responseOfMaster.equalsIgnoreCase("+PONG")){
+                redisCommandHandler.outputHandler(new DataOutputStream(this.socket.getOutputStream()),responseOfMasterArrayList,true);
+                RedisCommandHandler.ACK += this.redisEncoder.parseResponseIntoRESPBulk(responseOfMasterArrayList).length();
+            } else if (responseOfMaster.equalsIgnoreCase("+PONG")) {
                 System.out.println("Response is Pong");
                 break;
-            } else if (responseOfMaster.equalsIgnoreCase("+OK")){
+            } else if (responseOfMaster.equalsIgnoreCase("+OK")) {
                 System.out.println("Response is OK");
                 break;
+
+            } else if(responseOfMaster.startsWith("+FULL")){
+                responseOfMaster = bufferedReader.readLine();
+                int len = Integer.parseInt(responseOfMaster.substring(1));
+                char[] rdbFile = new char[len-1];
+                bufferedReader.read(rdbFile);
             }
+
+
         }
-        return responseOfMasterArrayList;
+
     }
 
-    public void sendCommand(ArrayList<String> arrayList) throws IOException {
-
-        System.out.println("Send Command");
+    public void sendInstructionToMaster(ArrayList<String> arrayList) throws IOException {
         DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
         this.redisCommandHandler.sendResponse(dos,arrayList);
-
-
     }
 
 
-
-
-
+    @Override
+    public void run() {
+        while (true){
+            try {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+                if(bufferedReader.ready()){
+                    getResponseOfMaster(bufferedReader);
+                }
+            } catch (IOException e) {
+                try {
+                    this.socket.close();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+    }
 }
