@@ -19,6 +19,9 @@ public class RedisEncoder {
     public String parseResponseIntoRESPBulk(int number){
         return ":"+number+"\r\n";
     }
+    public String simpleString(String response){
+        return "+"+response+"\r\n";
+    }
 
 
 }

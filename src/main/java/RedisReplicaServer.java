@@ -67,6 +67,8 @@ public class RedisReplicaServer implements Runnable {
 
             } else if(responseOfMaster.startsWith("+FULL")){
                 responseOfMaster = bufferedReader.readLine();
+                if (responseOfMaster == null)
+                    return;
                 int len = Integer.parseInt(responseOfMaster.substring(1));
                 char[] rdbFile = new char[len-1];
                 bufferedReader.read(rdbFile);

@@ -50,6 +50,11 @@ public class RedisCommandHandler implements CommandHandler{
     }
 
     @Override
+    public void sendResponseSimple(DataOutputStream dataOutputStream, String response) throws IOException {
+        dataOutputStream.write(redisEncoder.simpleString(response).getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
     public int getCommandLength(String command){
         return Integer.parseInt(command.substring(1).replace("\r\n",""));
     }
@@ -147,6 +152,15 @@ public class RedisCommandHandler implements CommandHandler{
                     sendResponse(dataOutputStream, Collections.list(redisRDB.getKeys()));
                 }
                 break;
+
+
+            case "type":
+                String value = redisRDB.getValue(list.get(1));
+                if (value.equalsIgnoreCase("null"))
+                    sendResponseSimple(dataOutputStream,"none");
+                else
+                    sendResponseSimple(dataOutputStream,"string");
+
             default:
                 System.out.println("Unknown Command "+command);
                 break;

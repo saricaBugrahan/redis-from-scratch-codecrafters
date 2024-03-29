@@ -11,6 +11,8 @@ public interface CommandHandler {
     void sendResponse(DataOutputStream dataOutputStream, int number) throws IOException;
     void sendResponsePing(DataOutputStream dataOutputStream,List<String> response) throws IOException;
     void sendRDB(DataOutputStream dataOutputStream,String prefix,byte[] rdb) throws  IOException;
+
+    void sendResponseSimple(DataOutputStream dataOutputStream,String response) throws IOException;
     int getCommandLength(String input);
 
 
