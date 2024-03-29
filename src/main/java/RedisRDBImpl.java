@@ -13,9 +13,10 @@ public class RedisRDBImpl {
     public String RDBVersion;
     public String RDBNumber;
 
-    //static public LinkedList<RedisRDBEntryRecord> redisRDBEntryRecords = new LinkedList<>();
-
     static public ConcurrentHashMap<String,RedisRDBEntryRecord> redisRBDMap = new ConcurrentHashMap<>();
+
+    //String[Stream-Value,Stream-ID],HashMap<Key,Value>
+    static public ConcurrentHashMap<String[],HashMap<String,String>> redisStream = new ConcurrentHashMap<>();
 
     public RedisRDBImpl(){
 
@@ -136,5 +137,12 @@ public class RedisRDBImpl {
             System.out.println("Unknown command " + command);
         }
         return 0L;
+    }
+    public boolean checkRedisStreamKey(String key){
+        for(String[] keyValues: redisStream.keySet()){
+            if (keyValues[0].equalsIgnoreCase(key))
+                return true;
+        }
+        return false;
     }
 }

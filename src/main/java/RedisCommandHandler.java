@@ -156,11 +156,25 @@ public class RedisCommandHandler implements CommandHandler{
 
             case "type":
                 String value = redisRDB.getValue(list.get(1));
-                if (value.equalsIgnoreCase("null"))
+                if (value.equalsIgnoreCase("null")){
+                    if (redisRDB.checkRedisStreamKey(list.get(1))){
+                        sendResponseSimple(dataOutputStream,"stream");
+                    }
                     sendResponseSimple(dataOutputStream,"none");
+                }
+
                 else
                     sendResponseSimple(dataOutputStream,"string");
+                break;
 
+            case "xadd":
+                HashMap<String,String> streamKeyValue = new HashMap<>();
+                for (int i = 3;i<list.size();i+=2){
+                    streamKeyValue.put(list.get(i),list.get(i+1));
+                }
+                RedisRDBImpl.redisStream.put(new String[]{list.get(1),list.get(2)},streamKeyValue);
+                sendResponse(dataOutputStream,list.get(2));
+                break;
             default:
                 System.out.println("Unknown Command "+command);
                 break;
