@@ -177,16 +177,18 @@ public class RedisCommandHandler implements CommandHandler{
                     if (ID.equalsIgnoreCase("0-0")){
                         sendResponseSimple(dataOutputStream,ERROR_EQUAL_MESSAGE,true);
                         return;
-                    } else if (ID.endsWith("*") && ID.length()== 1){
+                    } else if (ID.endsWith("*")){
+                        if (ID.length() == 1){
+                            ID = System.currentTimeMillis()+"-0";
+                        } else{
+                            ID = redisRDB.getIDFromStar(ID,true,null);
+                            LinkedList<RedisStreamEntryRecord> entry = new LinkedList<>();
+                            entry.add(new RedisStreamEntryRecord(ID,list.get(3),list.get(4)));
+                            RedisRDBImpl.redisStream.put(list.get(1),entry);
 
-                    } else if (ID.endsWith("*") && ID.length() != 1){
-                        ID = redisRDB.getIDFromStar(ID,true,null);
-                        LinkedList<RedisStreamEntryRecord> entry = new LinkedList<>();
-                        entry.add(new RedisStreamEntryRecord(ID,list.get(3),list.get(4)));
-                        RedisRDBImpl.redisStream.put(list.get(1),entry);
+                        }
                         sendResponse(dataOutputStream,ID);
                         return;
-
                     }
                     LinkedList<RedisStreamEntryRecord> entry = new LinkedList<>();
                     entry.add(new RedisStreamEntryRecord(ID,list.get(3),list.get(4)));
@@ -200,7 +202,10 @@ public class RedisCommandHandler implements CommandHandler{
                         sendResponseSimple(dataOutputStream,ERROR_EQUAL_MESSAGE,true);
                     } else{
                         if (ID.endsWith("*")){
-                            ID = redisRDB.getIDFromStar(ID,redisRDB.checkInitial(list.get(1),ID),list.get(1));
+                            if (ID.length() == 1)
+                                ID = System.currentTimeMillis()+"-0";
+                            else
+                                ID = redisRDB.getIDFromStar(ID,redisRDB.checkInitial(list.get(1),ID),list.get(1));
                             RedisRDBImpl.redisStream.get(list.get(1)).add(
                                     new RedisStreamEntryRecord(ID,list.get(3),list.get(4))
                             );
