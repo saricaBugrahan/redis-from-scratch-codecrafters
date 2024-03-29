@@ -13,6 +13,10 @@ public class RedisCommandHandler implements CommandHandler{
 
     public static int commandReplicaCounter = 0;
 
+    public String ERROR_MESSAGE = "ERR The ID specified in XADD is equal or smaller than the target stream top item";
+
+    public String ERROR_EQUAL_MESSAGE ="ERR The ID specified in XADD must be greater than 0-0";
+
     public RedisRDBImpl redisRDB;
 
     public RedisCommandHandler(){
@@ -50,8 +54,8 @@ public class RedisCommandHandler implements CommandHandler{
     }
 
     @Override
-    public void sendResponseSimple(DataOutputStream dataOutputStream, String response) throws IOException {
-        dataOutputStream.write(redisEncoder.simpleString(response).getBytes(StandardCharsets.UTF_8));
+    public void sendResponseSimple(DataOutputStream dataOutputStream, String response, boolean isError) throws IOException {
+        dataOutputStream.write(redisEncoder.simpleString(response,isError).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -158,22 +162,37 @@ public class RedisCommandHandler implements CommandHandler{
                 String value = redisRDB.getValue(list.get(1));
                 if (value.equalsIgnoreCase("null")){
                     if (redisRDB.checkRedisStreamKey(list.get(1))){
-                        sendResponseSimple(dataOutputStream,"stream");
+                        sendResponseSimple(dataOutputStream,"stream",false);
                     }
-                    sendResponseSimple(dataOutputStream,"none");
+                    sendResponseSimple(dataOutputStream,"none",false);
                 }
 
                 else
-                    sendResponseSimple(dataOutputStream,"string");
+                    sendResponseSimple(dataOutputStream,"string",false);
                 break;
 
             case "xadd":
-                HashMap<String,String> streamKeyValue = new HashMap<>();
-                for (int i = 3;i<list.size();i+=2){
-                    streamKeyValue.put(list.get(i),list.get(i+1));
+                if (!redisRDB.checkRedisStreamKey(list.get(1))){
+                    if (list.get(2).equalsIgnoreCase("0-0")){
+                        sendResponseSimple(dataOutputStream,ERROR_EQUAL_MESSAGE,true);
+                        return;
+                    }
+                    LinkedList<RedisStreamEntryRecord> entry = new LinkedList<>();
+                    entry.add(new RedisStreamEntryRecord(list.get(2),list.get(3),list.get(4)));
+                    RedisRDBImpl.redisStream.put(list.get(1),entry);
+                    sendResponseSimple(dataOutputStream,list.get(2),false);
+                } else{
+                    if (redisRDB.checkValidityRedisStreamKeyID(list.get(1),list.get(2)) == 0){
+                        sendResponseSimple(dataOutputStream,ERROR_MESSAGE,true);
+                    } else if (redisRDB.checkValidityRedisStreamKeyID(list.get(1),list.get(2)) == -1){
+                        sendResponseSimple(dataOutputStream,ERROR_EQUAL_MESSAGE,true);
+                    } else{
+                        RedisRDBImpl.redisStream.get(list.get(1)).add(
+                                new RedisStreamEntryRecord(list.get(2),list.get(3),list.get(4))
+                        );
+                        sendResponseSimple(dataOutputStream,list.get(2),false);
+                    }
                 }
-                RedisRDBImpl.redisStream.put(new String[]{list.get(1),list.get(2)},streamKeyValue);
-                sendResponse(dataOutputStream,list.get(2));
                 break;
             default:
                 System.out.println("Unknown Command "+command);

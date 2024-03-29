@@ -16,7 +16,7 @@ public class RedisRDBImpl {
     static public ConcurrentHashMap<String,RedisRDBEntryRecord> redisRBDMap = new ConcurrentHashMap<>();
 
     //String[Stream-Value,Stream-ID],HashMap<Key,Value>
-    static public ConcurrentHashMap<String[],HashMap<String,String>> redisStream = new ConcurrentHashMap<>();
+    static public ConcurrentHashMap<String,LinkedList<RedisStreamEntryRecord>> redisStream = new ConcurrentHashMap<>();
 
     public RedisRDBImpl(){
 
@@ -58,17 +58,17 @@ public class RedisRDBImpl {
     private int getLength(DataInputStream dataInputStream) throws IOException {
         byte command = dataInputStream.readByte();
         if((command & 0xc0) == 0x00){
-            //System.out.println("Next 6 bit represent length");
+            System.out.println("Next 6 bit represent length");
             return command & 0x3F;
         } else if((command &  0xc0) == 0x40){
-            //System.out.println("Read one additional byte. The combined 14 bits represent the length");
+            System.out.println("Read one additional byte. The combined 14 bits represent the length");
             return ((command & 0x3F) <<8) | (dataInputStream.readByte() & 0xff);
 
         } else if ((command &  0xc0) == 0x80){
-            //System.out.println("Discard the remaining 6 bits. The next 4 bytes from the stream represent the length");
+            System.out.println("Discard the remaining 6 bits. The next 4 bytes from the stream represent the length");
             return dataInputStream.readInt();
         } else if ((command & 0xc0) == 0xC0){
-            //System.out.println("The next object is encoded in a special format. The remaining 6 bits indicate the format. May be used to store numbers or Strings");
+            System.out.println("The next object is encoded in a special format. The remaining 6 bits indicate the format. May be used to store numbers or Strings");
         } else{
             System.out.println("Wrong number of input");
         }
@@ -106,10 +106,7 @@ public class RedisRDBImpl {
     }
 
     public String getValue(String key){
-        System.out.println("Keys");
-        Collections.list(getKeys()).forEach(System.out::println);
         if (redisRBDMap.containsKey(key)){
-            System.out.println("Contains key");
 
             return redisRBDMap.get(key).Value();
 
@@ -139,10 +136,25 @@ public class RedisRDBImpl {
         return 0L;
     }
     public boolean checkRedisStreamKey(String key){
-        for(String[] keyValues: redisStream.keySet()){
-            if (keyValues[0].equalsIgnoreCase(key))
+        for(String keyValues: redisStream.keySet()){
+            if (keyValues.equalsIgnoreCase(key))
                 return true;
         }
         return false;
+    }
+    public int checkValidityRedisStreamKeyID(String streamKey,String id){
+        LinkedList<RedisStreamEntryRecord> redisStreamEntryRecordLinkedList = redisStream.get(streamKey);
+        for(RedisStreamEntryRecord stream : redisStreamEntryRecordLinkedList){
+            if (id.equalsIgnoreCase("0-0"))
+                return -1;
+            if (id.equalsIgnoreCase(stream.id()))
+                return 0;
+            if (Long.parseLong(id.split("-")[0])< Long.parseLong(stream.id().split("-")[0]))
+                return 0;
+            if (Long.parseLong(id.split("-")[1])< Long.parseLong(stream.id().split("-")[1]))
+                return 0;
+        }
+        return 1;
+
     }
 }

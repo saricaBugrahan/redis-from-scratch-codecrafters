@@ -12,7 +12,7 @@ public interface CommandHandler {
     void sendResponsePing(DataOutputStream dataOutputStream,List<String> response) throws IOException;
     void sendRDB(DataOutputStream dataOutputStream,String prefix,byte[] rdb) throws  IOException;
 
-    void sendResponseSimple(DataOutputStream dataOutputStream,String response) throws IOException;
+    void sendResponseSimple(DataOutputStream dataOutputStream,String response,boolean isError) throws IOException;
     int getCommandLength(String input);
 
 
