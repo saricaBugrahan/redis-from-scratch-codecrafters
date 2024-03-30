@@ -219,6 +219,17 @@ public class RedisCommandHandler implements CommandHandler{
                     }
                 }
                 break;
+
+            case "xrange":
+                String masterKey = list.get(1);
+                String IDStart = list.get(2);
+                String IDEnd = list.get(3);
+
+                LinkedList<RedisStreamEntryRecord> streamEntryRecordsInRange = redisRDB.getStreamRecordsInRange(masterKey,IDStart,IDEnd);
+                String test = redisEncoder.respStreamEncoder(streamEntryRecordsInRange);
+                System.out.println(test);
+                dataOutputStream.write(test.getBytes(StandardCharsets.UTF_8));
+                break;
             default:
                 System.out.println("Unknown Command "+command);
                 break;

@@ -1,3 +1,4 @@
+import java.util.LinkedList;
 import java.util.List;
 
 public class RedisEncoder {
@@ -24,6 +25,20 @@ public class RedisEncoder {
             return "-"+response+"\r\n";
         }
         return "+"+response+"\r\n";
+    }
+
+    public String getLength(int len){
+        return "*%d\r\n".formatted(len);
+    }
+
+    public String respStreamEncoder(LinkedList<RedisStreamEntryRecord> streamEntryRecords){
+        LinkedList<String> list = new LinkedList<>();
+        for (RedisStreamEntryRecord record: streamEntryRecords){
+            String ID = parseResponseIntoRESPBulk(record.id());
+            String values = parseResponseIntoRESPBulk(List.of(record.key(),record.value()));
+            list.add(parseResponseIntoRESPBulk(List.of(ID,values)));
+        }
+        return parseResponseIntoRESPBulk(list);
     }
 
 

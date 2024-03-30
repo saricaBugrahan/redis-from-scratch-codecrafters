@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.lang.Integer.parseInt;
+
 public class RedisRDBImpl {
 
     public String RDBDirectory = "";
@@ -144,6 +146,8 @@ public class RedisRDBImpl {
     }
     public int checkValidityRedisStreamKeyID(String streamKey,String id){
         LinkedList<RedisStreamEntryRecord> redisStreamEntryRecordLinkedList = redisStream.get(streamKey);
+        if (redisStreamEntryRecordLinkedList == null)
+            return 1;
         for(RedisStreamEntryRecord stream : redisStreamEntryRecordLinkedList){
             if (id.endsWith("*")){
                 return 1;
@@ -184,9 +188,29 @@ public class RedisRDBImpl {
         LinkedList<Integer> idListStartsWithSameID = new LinkedList<>();
         for(RedisStreamEntryRecord record: redisStreamEntryRecordLinkedList){
             if (record.id().split("-")[0].equalsIgnoreCase(ID.split("-")[0]))
-                idListStartsWithSameID.add(Integer.parseInt(record.id().split("-")[1]));
+                idListStartsWithSameID.add(parseInt(record.id().split("-")[1]));
         }
         return idListStartsWithSameID.stream().max(Integer::compare).get();
+
+    }
+    public LinkedList<RedisStreamEntryRecord> getStreamRecordsInRange(String masterKey, String IDStart, String IDEnd){
+        LinkedList<RedisStreamEntryRecord> streamEntryRecordsInRange = new LinkedList<>();
+        String[] IDStartSplit = IDStart.split("-");
+        String[] IDEndSplit = IDEnd.split("-");
+        int IDStartms =  Integer.parseInt(IDStartSplit[0]);
+        int IDStartSeq = Integer.parseInt(IDStartSplit[1]);
+        int IDEndms =Integer.parseInt(IDEndSplit[0]);
+        int IDEndSeq = Integer.parseInt(IDEndSplit[1]);
+        for (RedisStreamEntryRecord record: redisStream.get(masterKey)){
+            if (IDStartms<= Integer.parseInt(record.id().split("-")[0])
+                    && IDEndms>= Integer.parseInt(record.id().split("-")[0])
+                    && IDEndSeq>= Integer.parseInt(record.id().split("-")[1])
+                    && IDStartSeq<= Integer.parseInt(record.id().split("-")[1])  ){
+                streamEntryRecordsInRange.add(record);
+
+            }
+        }
+        return streamEntryRecordsInRange;
 
     }
 }
