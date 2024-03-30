@@ -47,7 +47,3 @@ To use the Redis server implementation, follow these steps:
 ## Contributing
 
 Contributions to this Redis server implementation are welcome! If you encounter any bugs, have suggestions for improvements, or want to add new features, please open an issue or submit a pull request. Your contributions help make this project better for everyone.
-
-## License
-
-This Redis server implementation is licensed under the [MIT License](LICENSE), allowing for both personal and commercial use with attribution.
